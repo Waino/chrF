@@ -14,19 +14,22 @@ __author_email__ = "stig-arne.gronroos@aalto.fi"
 
 #_logger = logging.getLogger(__name__)
 
+def ngrams(line, n):
+    """Yields ngrams of length exactly n."""
+    offsets = [line[i:] for i in range(n)]
+    for ngram in zip(*offsets):
+        yield ngram
 
-def ngrams(line, max_n, use_space=True):
+def ngrams_up_to(line, max_n, use_space=True):
     """Yields all character n-grams of lengths from 1 to max_n.
     If use_space is False, spaces are not counted as chars."""
-    # FIXME: need to group by n
     if not use_space:
         line = line.replace(' ', '')
     max_n = min(max_n, len(line))
+    result = []
     for n in range(1, max_n + 1):
-        offsets = [line[i:] for i in range(n)]
-        for ngram in zip(*offsets):
-            yield ngram
-
+        result.append(list(ngrams(line, n)))
+    return result
 
 def errors(hypothesis, reference):
     errorcount = 0.0
