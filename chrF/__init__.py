@@ -34,7 +34,8 @@ def ngrams_up_to(line, max_n, use_space=True):
         result.append(list(ngrams(line, n)))
     return result
 
-def errors(hypothesis, reference):
+def errors_n(hypothesis, reference):
+    """Errors for a single length of n-gram"""
     errorcount = 0.0
     precrec = 0.0
     missing = []
@@ -57,3 +58,12 @@ def errors(hypothesis, reference):
 
     return errorcount, precrec, missing
 
+def errors_multiref(hypothesis, references, max_n, use_space=True):
+    hyp_ngrams = ngrams_up_to(hypothesis, max_n, use_space=use_space)
+    ref_ngrams = zip(*(ngrams_up_to(line, max_n, use_space=use_space)
+                       for line in references))
+    for n in range(max_n):  # FIXME badly named: n - 1
+        hyp = hyp_ngrams[n]
+        for ref in ref_ngrams[n]:
+            errorcount, precrec, missing = errors_n(hyp, ref)
+            print(errorcount, precrec, missing) # FIXME debug
