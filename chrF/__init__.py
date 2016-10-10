@@ -23,6 +23,9 @@ def ngrams(line, n):
 def ngrams_up_to(line, max_n, use_space=True):
     """Yields all character n-grams of lengths from 1 to max_n.
     If use_space is False, spaces are not counted as chars."""
+    # space appended to treat last word equally to others
+    # and for compatibility with original
+    line += ' '
     if not use_space:
         line = line.replace(' ', '')
     max_n = min(max_n, len(line))
