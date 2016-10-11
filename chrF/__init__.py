@@ -32,10 +32,13 @@ def ngrams_up_to(line, max_n, use_space=True):
     line += ' '
     if not use_space:
         line = line.replace(' ', '')
-    max_n = min(max_n, len(line))
+    use_n = min(max_n, len(line))
     result = []
-    for n in range(1, max_n + 1):
+    for n in range(1, use_n + 1):
         result.append(list(ngrams(line, n)))
+    for _ in range(max_n - use_n):
+        # empty lists for too long n-grams
+        result.append([])
     return result
 
 def errors_n(hypothesis, reference):
@@ -80,9 +83,11 @@ def print_missing_ngrams(n_sentences, side, i, error, compatible=False):
     sys.stdout.write('{}::{}-{}grams: '.format(
         n_sentences, side, i + 1))
     if compatible:
+        # output compatible with original implementation
         sys.stdout.write(' '.join(
             '=='.join(ngram).replace(' ', '=')
             for ngram in error.missing))
+        sys.stdout.write(' ')
     else:
         sys.stdout.write(' '.join(
             ''.join(ngram)
