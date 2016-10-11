@@ -62,8 +62,10 @@ def errors_multiref(hypothesis, references, max_n, use_space=True):
     hyp_ngrams = ngrams_up_to(hypothesis, max_n, use_space=use_space)
     ref_ngrams = zip(*(ngrams_up_to(line, max_n, use_space=use_space)
                        for line in references))
-    for n in range(max_n):  # FIXME badly named: n - 1
-        hyp = hyp_ngrams[n]
-        for ref in ref_ngrams[n]:
-            errorcount, precrec, missing = errors_n(hyp, ref)
-            print(errorcount, precrec, missing) # FIXME debug
+    for (hyp, refs) in zip(hyp_ngrams, ref_ngrams):
+        best_hyp_error = min((errors_n(hyp, ref) for ref in refs),
+                             key=lambda x: x[1])
+        best_ref_error = min((errors_n(ref, hyp) for ref in refs),
+                             key=lambda x: x[1])
+        print(best_hyp_error)
+        print(best_ref_error)
