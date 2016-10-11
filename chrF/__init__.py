@@ -103,6 +103,8 @@ def evaluate(hyp_lines, ref_lines, max_n,
 
     # FIXME: safe zip
     for (hyp_line, ref_line) in zip(hyp_lines, ref_lines):
+        hyp_line = hyp_line.strip()
+        ref_line = ref_line.strip()
         n_sentences += 1
         references = ref_line.split(ref_separator)
         sent_pre = [0. for _ in range(max_n)]
@@ -133,22 +135,22 @@ def evaluate(hyp_lines, ref_lines, max_n,
                 
                 if ngram_level:
                     sys.stdout.write('{}::{}gram-{:6s}{:.4f}\n'.format(
-                        n_sentences, 'F', sent_f[i]))
+                        n_sentences, i + 1, 'F', sent_f[i]))
                     sys.stdout.write('{}::{}gram-{:6s}{:.4f}\n'.format(
-                        n_sentences, 'Prec', sent_pre[i]))
+                        n_sentences, i + 1, 'Prec', sent_pre[i]))
                     sys.stdout.write('{}::{}gram-{:6s}{:.4f}\n'.format(
-                        n_sentences, 'Rec', sent_rec[i]))
+                        n_sentences, i + 1, 'Rec', sent_rec[i]))
 
         if sentence_level:
-            sys.stdout.write('{}::{}chr{}\t{:.4f}\n'.format(
-                n_sentences, beta, 'F',
-                sum(w * f for (w, f) in (ngram_weights, sent_f))))
-            sys.stdout.write('{}::{}gram{}\t{:.4f}\n'.format(
+            sys.stdout.write('{}::chr{}-{}\t{:.4f}\n'.format(
+                n_sentences, 'F', beta,
+                sum(w * f for (w, f) in zip(ngram_weights, sent_f))))
+            sys.stdout.write('{}::chr{}\t{:.4f}\n'.format(
                 n_sentences, 'Prec', 
-                sum(w * p for (w, p) in (ngram_weights, sent_pre))))
-            sys.stdout.write('{}::{}gram{}\t{:.4f}\n'.format(
+                sum(w * p for (w, p) in zip(ngram_weights, sent_pre))))
+            sys.stdout.write('{}::chr{}\t{:.4f}\n'.format(
                 n_sentences, 'Rec',
-                sum(w * r for (w, r) in (ngram_weights, sent_rec))))
+                sum(w * r for (w, r) in zip(ngram_weights, sent_rec))))
 
     tot_pre = [100 * (1 - (ref_per[i] / ref_len[i]))
                if ref_len[i] > 0 else 0
@@ -157,26 +159,41 @@ def evaluate(hyp_lines, ref_lines, max_n,
                if hyp_len[i] > 0 else 0
                for i in range(max_n)]
     divisors = [(factor * tot_pre[i] + tot_rec[i]) for i in range(max_n)]
-    tot_f = [(1 + factor) * tot_pre[i] * tot_rec[i] / divisor
-             if divisor > 0 else 0
+    tot_f = [(1 + factor) * tot_pre[i] * tot_rec[i] / divisors[i]
+             if divisors[i] > 0 else 0
              for i in range(max_n)]
+
     if ngram_level:
         for i in range(max_n):
             sys.stdout.write('{}gram-{:6s}{:.4f}\n'.format(
-                'F', tot_f[i]))
+                i + 1, 'F', tot_f[i]))
             sys.stdout.write('{}gram-{:6s}{:.4f}\n'.format(
-                'Prec', tot_pre[i]))
+                i + 1, 'Prec', tot_pre[i]))
             sys.stdout.write('{}gram-{:6s}{:.4f}\n'.format(
-                'Rec', tot_rec[i]))
+                i + 1, 'Rec', tot_rec[i]))
 
-    sys.stdout.write('{}::{}chr{}\t{:.4f}\n'.format(
-        n_sentences, beta, 'F',
-        sum(w * f for (w, f) in (ngram_weights, sent_f))))
-    sys.stdout.write('{}::{}gram{}\t{:.4f}\n'.format(
-        n_sentences, 'Prec', 
-        sum(w * p for (w, p) in (ngram_weights, sent_pre))))
-    sys.stdout.write('{}::{}gram{}\t{:.4f}\n'.format(
-        n_sentences, 'Rec',
-        sum(w * r for (w, r) in (ngram_weights, sent_rec))))
+    sys.stdout.write('chr{}-{}\t{:.4f}\n'.format(
+        'F', beta,
+        sum(w * f for (w, f) in zip(ngram_weights, tot_f))))
+    sys.stdout.write('chr{}\t{:.4f}\n'.format(
+        'Prec', 
+        sum(w * p for (w, p) in zip(ngram_weights, tot_pre))))
+    sys.stdout.write('chr{}\t{:.4f}\n'.format(
+        'Rec',
+        sum(w * r for (w, r) in zip(ngram_weights, tot_rec))))
 
 
+if __name__ == '__main__':
+    with open('direct.plain', 'r') as hyp_lines:
+        with open('ref.plain', 'r') as ref_lines:
+            evaluate(hyp_lines,
+                     ref_lines,
+                     max_n=6,
+                     beta=2.0,
+                     ngram_weights=None,
+                     use_space=True,
+                     ref_separator='*#',
+                     out_separator='==',
+                     print_missing=True,
+                     sentence_level=True,
+                     ngram_level=True)
