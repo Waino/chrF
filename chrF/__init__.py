@@ -87,7 +87,7 @@ def print_missing_ngrams(n_sentences, side, i, error, out_separator):
 def evaluate(hyp_lines, ref_lines, max_n,
              beta=1.0, ngram_weights=None,
              use_space=True, ref_separator='*#', out_separator='',
-             print_missing=False, level='system'):
+             print_missing=False, sentence_level=False, ngram_level=False):
     hyp_per = [0. for _ in range(max_n)]
     hyp_len = [0. for _ in range(max_n)]
     ref_per = [0. for _ in range(max_n)]
@@ -122,7 +122,7 @@ def evaluate(hyp_lines, ref_lines, max_n,
                 print_missing_ngrams(n_sentences, 'hyp', i, hyp_error,
                                      out_separator)
 
-            if level in ('sentence', 'ngram'):
+            if sentence_level:
                 sent_pre[i] = 100 - ref_error.precrec
                 sent_rec[i] = 100 - hyp_error.precrec
                 if sent_pre[i] != 0 or sent_rec[i] != 0:
@@ -131,7 +131,7 @@ def evaluate(hyp_lines, ref_lines, max_n,
                 else:
                     sent_f[i] = 0
                 
-                if level == 'ngram':
+                if ngram_level:
                     sys.stdout.write('{}::{}gram-{:6s}{:.4f}\n'.format(
                         n_sentences, 'F', sent_f[i]))
                     sys.stdout.write('{}::{}gram-{:6s}{:.4f}\n'.format(
@@ -139,7 +139,7 @@ def evaluate(hyp_lines, ref_lines, max_n,
                     sys.stdout.write('{}::{}gram-{:6s}{:.4f}\n'.format(
                         n_sentences, 'Rec', sent_rec[i]))
 
-        if level in ('sentence', 'ngram'):
+        if sentence_level:
             sys.stdout.write('{}::{}chr{}\t{:.4f}\n'.format(
                 n_sentences, beta, 'F',
                 sum(w * f for (w, f) in (ngram_weights, sent_f))))
@@ -149,6 +149,25 @@ def evaluate(hyp_lines, ref_lines, max_n,
             sys.stdout.write('{}::{}gram{}\t{:.4f}\n'.format(
                 n_sentences, 'Rec',
                 sum(w * r for (w, r) in (ngram_weights, sent_rec))))
+
+    tot_pre = [100 * (1 - (ref_per[i] / ref_len[i]))
+               if ref_len[i] > 0 else 0
+               for i in range(max_n)]
+    tot_rec = [100 * (1 - (hyp_per[i] / hyp_len[i]))
+               if hyp_len[i] > 0 else 0
+               for i in range(max_n)]
+    divisors = [(factor * tot_pre[i] + tot_rec[i]) for i in range(max_n)]
+    tot_f = [(1 + factor) * tot_pre[i] * tot_rec[i] / divisor
+             if divisor > 0 else 0
+             for i in range(max_n)]
+    if ngram_level:
+        for i in range(max_n):
+            sys.stdout.write('{}gram-{:6s}{:.4f}\n'.format(
+                'F', tot_f[i]))
+            sys.stdout.write('{}gram-{:6s}{:.4f}\n'.format(
+                'Prec', tot_pre[i]))
+            sys.stdout.write('{}gram-{:6s}{:.4f}\n'.format(
+                'Rec', tot_rec[i]))
 
     sys.stdout.write('{}::{}chr{}\t{:.4f}\n'.format(
         n_sentences, beta, 'F',
