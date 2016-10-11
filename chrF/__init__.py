@@ -8,7 +8,7 @@ import collections
 import sys
 
 Errors = collections.namedtuple('Errors',
-    ['count', 'precrec', 'missing', 'reflen'])
+    ['count', 'precrec', 'missing', 'hyplen', 'reflen'])
 
 #__all__ = []
 
@@ -63,7 +63,8 @@ def errors_n(hypothesis, reference):
             else:
                 precrec = 0.
 
-    return Errors(errorcount, precrec, missing, len(reference))
+    return Errors(errorcount, precrec, missing,
+                  len(hypothesis), len(reference))
 
 def errors_multiref(hypothesis, references, max_n, use_space=True):
     """Yields errors in both directions,
@@ -135,8 +136,10 @@ def evaluate(hyp_lines, ref_lines, max_n,
                                      compatible)
 
             if sentence_level:
-                sent_pre[i] = 100 - hyp_error.precrec
-                sent_rec[i] = 100 - ref_error.precrec
+                sent_pre[i] = 100 - hyp_error.precrec \
+                    if hyp_error.hyplen > 0 else 0
+                sent_rec[i] = 100 - ref_error.precrec \
+                    if ref_error.hyplen > 0 else 0
                 if sent_pre[i] != 0 or sent_rec[i] != 0:
                     sent_f[i] = ((1 + factor) * sent_pre[i] * sent_rec[i]
                                  / (factor * sent_pre[i] + sent_rec[i]))
