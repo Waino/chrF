@@ -6,6 +6,9 @@ Original by Maja Popovic
 
 import collections
 
+Errors = collections.namedtuple('Errors',
+    ['count', 'precrec', 'missing', 'reflen'])
+
 #__all__ = []
 
 __version__ = '0.0.1'
@@ -56,7 +59,7 @@ def errors_n(hypothesis, reference):
             else:
                 precrec = 0
 
-    return errorcount, precrec, missing
+    return Errors(errorcount, precrec, missing, len(reference))
 
 def errors_multiref(hypothesis, references, max_n, use_space=True):
     hyp_ngrams = ngrams_up_to(hypothesis, max_n, use_space=use_space)
@@ -64,8 +67,8 @@ def errors_multiref(hypothesis, references, max_n, use_space=True):
                        for line in references))
     for (hyp, refs) in zip(hyp_ngrams, ref_ngrams):
         best_hyp_error = min((errors_n(hyp, ref) for ref in refs),
-                             key=lambda x: x[1])
+                             key=lambda x: x.precrec)
         best_ref_error = min((errors_n(ref, hyp) for ref in refs),
-                             key=lambda x: x[1])
+                             key=lambda x: x.precrec)
         print(best_hyp_error)
         print(best_ref_error)
