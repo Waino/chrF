@@ -124,10 +124,12 @@ def evaluate(hyp_lines, ref_lines, max_n,
         errors = errors_multiref(hyp_line, references,
                                  max_n, use_space=use_space)
         for (i, hyp_error, ref_error) in errors:
+            # in both cases .hyplen is correct
+            # hyplen is a misnomer: should be "length used for normalization"
             hyp_per[i] += hyp_error.count
-            hyp_len[i] += hyp_error.reflen
+            hyp_len[i] += hyp_error.hyplen
             ref_per[i] += ref_error.count
-            ref_len[i] += ref_error.reflen
+            ref_len[i] += ref_error.hyplen
 
             if print_missing:
                 print_missing_ngrams(n_sentences, 'ref', i, ref_error,
@@ -165,11 +167,11 @@ def evaluate(hyp_lines, ref_lines, max_n,
                 n_sentences, 'Rec',
                 sum(w * r for (w, r) in zip(ngram_weights, sent_rec))))
 
-    tot_pre = [100 * (1 - (ref_per[i] / ref_len[i]))
-               if ref_len[i] > 0 else 0
-               for i in range(max_n)]
-    tot_rec = [100 * (1 - (hyp_per[i] / hyp_len[i]))
+    tot_pre = [100 * (1 - (hyp_per[i] / hyp_len[i]))
                if hyp_len[i] > 0 else 0
+               for i in range(max_n)]
+    tot_rec = [100 * (1 - (ref_per[i] / ref_len[i]))
+               if ref_len[i] > 0 else 0
                for i in range(max_n)]
     divisors = [(factor * tot_pre[i] + tot_rec[i]) for i in range(max_n)]
     tot_f = [(1 + factor) * tot_pre[i] * tot_rec[i] / divisors[i]
