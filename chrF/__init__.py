@@ -62,6 +62,9 @@ def errors_n(hypothesis, reference):
     return Errors(errorcount, precrec, missing, len(reference))
 
 def errors_multiref(hypothesis, references, max_n, use_space=True):
+    """Yields errors in both directions,
+    against the best matching of multiple references,
+    for all ngram lengths up to max_n"""
     hyp_ngrams = ngrams_up_to(hypothesis, max_n, use_space=use_space)
     ref_ngrams = zip(*(ngrams_up_to(line, max_n, use_space=use_space)
                        for line in references))
@@ -70,5 +73,4 @@ def errors_multiref(hypothesis, references, max_n, use_space=True):
                              key=lambda x: x.precrec)
         best_ref_error = min((errors_n(ref, hyp) for ref in refs),
                              key=lambda x: x.precrec)
-        print(best_hyp_error)
-        print(best_ref_error)
+        yield (best_hyp_error, best_ref_error)
