@@ -76,17 +76,22 @@ def errors_multiref(hypothesis, references, max_n, use_space=True):
                              key=lambda x: x.precrec)
         yield (i, best_hyp_error, best_ref_error)
 
-def print_missing_ngrams(n_sentences, side, i, error, out_separator):
+def print_missing_ngrams(n_sentences, side, i, error, compatible=False):
     sys.stdout.write('{}::{}-{}grams: '.format(
         n_sentences, side, i + 1))
-    sys.stdout.write(' '.join(
-        out_separator.join(ngram)
-        for ngram in error.missing))
+    if compatible:
+        sys.stdout.write(' '.join(
+            '=='.join(ngram).replace(' ', '=')
+            for ngram in error.missing))
+    else:
+        sys.stdout.write(' '.join(
+            ''.join(ngram)
+            for ngram in error.missing))
     sys.stdout.write('\n')
 
 def evaluate(hyp_lines, ref_lines, max_n,
              beta=1.0, ngram_weights=None,
-             use_space=True, ref_separator='*#', out_separator='',
+             use_space=True, ref_separator='*#', compatible=False,
              print_missing=False, sentence_level=False, ngram_level=False):
     hyp_per = [0. for _ in range(max_n)]
     hyp_len = [0. for _ in range(max_n)]
@@ -120,13 +125,13 @@ def evaluate(hyp_lines, ref_lines, max_n,
 
             if print_missing:
                 print_missing_ngrams(n_sentences, 'ref', i, ref_error,
-                                     out_separator)
+                                     compatible)
                 print_missing_ngrams(n_sentences, 'hyp', i, hyp_error,
-                                     out_separator)
+                                     compatible)
 
             if sentence_level:
-                sent_pre[i] = 100 - ref_error.precrec
-                sent_rec[i] = 100 - hyp_error.precrec
+                sent_pre[i] = 100 - hyp_error.precrec
+                sent_rec[i] = 100 - ref_error.precrec
                 if sent_pre[i] != 0 or sent_rec[i] != 0:
                     sent_f[i] = ((1 + factor) * sent_pre[i] * sent_rec[i]
                                  / (factor * sent_pre[i] + sent_rec[i]))
@@ -193,7 +198,7 @@ if __name__ == '__main__':
                      ngram_weights=None,
                      use_space=True,
                      ref_separator='*#',
-                     out_separator='==',
+                     compatible=True,
                      print_missing=True,
                      sentence_level=True,
                      ngram_level=True)
