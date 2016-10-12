@@ -27,8 +27,8 @@ setup(name='chrF',
           #'Topic :: Scientific/Engineering',
       ],
       license="BSD",
-      #scripts=['scripts/chrF',
-      #        ],
+      scripts=['scripts/chrF',
+              ],
       #install_requires=requires,
       #extras_require={
       #    'docs': [l.strip() for l in open('docs/build_requirements.txt')]
