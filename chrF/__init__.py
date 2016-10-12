@@ -258,6 +258,6 @@ if __name__ == '__main__':
                 use_space=True,
                 ref_separator='*#',
                 compatible=True,
-                print_missing=True,
-                sentence_level=True,
-                ngram_level=True)
+                print_missing=False, #True,
+                sentence_level=False, #True,
+                ngram_level=False) #True)
