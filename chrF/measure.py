@@ -5,6 +5,7 @@ Original by Maja Popovic
 """
 
 import collections
+import itertools
 import sys
 
 Errors = collections.namedtuple('Errors',
@@ -222,8 +223,7 @@ def evaluate(hyp_lines,
         tot = sum(ngram_weights)
         ngram_weights = [float(w) / tot for w in ngram_weights]
 
-    # FIXME: safe zip
-    for (hyp_line, ref_line) in zip(hyp_lines, ref_lines):
+    for (hyp_line, ref_line) in safe_zip(hyp_lines, ref_lines):
         n_sentences += 1
         hyp_line = hyp_line.strip()
         ref_line = ref_line.strip()
@@ -249,3 +249,14 @@ def evaluate(hyp_lines,
         print_summary(tot_stats, beta, ngram_weights,
                       ngram_level, hide_precrec)
     return tot_stats
+
+
+def safe_zip(*iterables):
+    iters = [iter(x) for x in iterables]
+    sentinel = object()
+    for (j, tpl) in enumerate(itertools.zip_longest(*iterables, fillvalue=sentinel)):
+        for (i, val) in enumerate(tpl):
+            if val is sentinel:
+                raise ValueError('Input {} was too short. '
+                    'Row {} (and later) missing.'.format(i, j))
+        yield tpl
