@@ -116,10 +116,10 @@ class Stats(object):
         return self
 
     def ngram_prf(self, factor):
-        pre = [100 * (1 - (self.hyp_err[i] / self.hyp_len[i]))
+        pre = [100 - (100 * (self.hyp_err[i] / self.hyp_len[i]))
                if self.hyp_len[i] > 0 else 0
                for i in range(self.max_n)]
-        rec = [100 * (1 - (self.ref_err[i] / self.ref_len[i]))
+        rec = [100 - (100 * (self.ref_err[i] / self.ref_len[i]))
                if self.ref_len[i] > 0 else 0
                for i in range(self.max_n)]
         divisors = [(factor * pre[i] + rec[i]) for i in range(self.max_n)]
@@ -158,6 +158,7 @@ def print_single(stats, line_n, beta, factor, ngram_weights,
         for i in range(stats.max_n):
             print_missing_ngrams(line_n, 'ref', i, stats.ref_missing[i],
                                  compatible)
+        for i in range(stats.max_n):
             print_missing_ngrams(line_n, 'hyp', i, stats.hyp_missing[i],
                                  compatible)
 
