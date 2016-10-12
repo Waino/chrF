@@ -80,31 +80,115 @@ def errors_multiref(hypothesis, references, max_n, use_space=True):
                              key=lambda x: x.precrec)
         yield (i, best_hyp_error, best_ref_error)
 
-def print_missing_ngrams(n_sentences, side, i, error, compatible=False):
+def print_missing_ngrams(n_sentences, side, i, missing, compatible=False):
     sys.stdout.write('{}::{}-{}grams: '.format(
         n_sentences, side, i + 1))
     if compatible:
         # output compatible with original implementation
         sys.stdout.write(' '.join(
             '=='.join(ngram).replace(' ', '=')
-            for ngram in error.missing))
+            for ngram in missing))
         sys.stdout.write(' ')
     else:
         sys.stdout.write(' '.join(
             ''.join(ngram)
-            for ngram in error.missing))
+            for ngram in missing))
     sys.stdout.write('\n')
+
+class Stats(object):
+    def __init__(self, max_n):
+        self.max_n = max_n
+        self.hyp_err = [0. for _ in range(max_n)]
+        self.hyp_len = [0. for _ in range(max_n)]
+        self.hyp_missing = [list() for _ in range(max_n)]
+        self.ref_err = [0. for _ in range(max_n)]
+        self.ref_len = [0. for _ in range(max_n)]
+        self.ref_missing = [list() for _ in range(max_n)]
+
+    def __iadd__(self, other):
+        for i in range(self.max_n):
+            self.hyp_err[i] += other.hyp_err[i]
+            self.hyp_len[i] += other.hyp_len[i]
+            self.ref_err[i] += other.ref_err[i]
+            self.ref_len[i] += other.ref_len[i]
+        self.hyp_missing = None     # not aggregated
+        self.ref_missing = None     # not aggregated
+        return self
+
+    def ngram_prf(self, factor):
+        pre = [100 * (1 - (self.hyp_err[i] / self.hyp_len[i]))
+               if self.hyp_len[i] > 0 else 0
+               for i in range(self.max_n)]
+        rec = [100 * (1 - (self.ref_err[i] / self.ref_len[i]))
+               if self.ref_len[i] > 0 else 0
+               for i in range(self.max_n)]
+        divisors = [(factor * pre[i] + rec[i]) for i in range(self.max_n)]
+        f = [(1 + factor) * pre[i] * rec[i] / divisors[i]
+             if divisors[i] > 0 else 0
+             for i in range(self.max_n)]
+
+        return (pre, rec, f)
+
+def apply_ngram_weights(pres, recs, fs, ngram_weights):
+    pre = sum(w * p for (w, p) in zip(ngram_weights, pres))
+    rec = sum(w * r for (w, r) in zip(ngram_weights, recs))
+    f   = sum(w * f for (w, f) in zip(ngram_weights, fs))
+    return (pre, rec, f)
+
+def evaluate_single(hypothesis, references, max_n, factor,
+                    use_space=True, ref_separator='*#'):
+    stats = Stats(max_n)
+    errors = errors_multiref(hypothesis, references,
+                             max_n, use_space=use_space)
+    for (i, hyp_error, ref_error) in errors:
+        # in both cases .hyplen is correct
+        # hyplen is a misnomer: should be "length used for normalization"
+        stats.hyp_err[i] = hyp_error.count
+        stats.hyp_len[i] = hyp_error.hyplen
+        stats.ref_err[i] = ref_error.count
+        stats.ref_len[i] = ref_error.hyplen
+        stats.hyp_missing[i] = hyp_error.missing
+        stats.ref_missing[i] = ref_error.missing
+    return stats
+
+
+def print_single(stats, line_n, beta, factor, ngram_weights,
+                 print_missing, sentence_level, ngram_level, compatible):
+    if print_missing:
+        for i in range(stats.max_n):
+            print_missing_ngrams(line_n, 'ref', i, stats.ref_missing[i],
+                                 compatible)
+            print_missing_ngrams(line_n, 'hyp', i, stats.hyp_missing[i],
+                                 compatible)
+
+    pres, recs, fs = stats.ngram_prf(factor)
+    if ngram_level:
+        for i in range(stats.max_n):
+            sys.stdout.write('{}::{}gram-{:6s}{:.4f}\n'.format(
+                line_n, i + 1, 'F', fs[i]))
+            sys.stdout.write('{}::{}gram-{:6s}{:.4f}\n'.format(
+                line_n, i + 1, 'Prec', pres[i]))
+            sys.stdout.write('{}::{}gram-{:6s}{:.4f}\n'.format(
+                line_n, i + 1, 'Rec', recs[i]))
+            
+    if sentence_level:
+        pre, rec, f = apply_ngram_weights(
+            pres, recs, fs, ngram_weights)
+        sys.stdout.write('{}::chr{}-{}\t{:.4f}\n'.format(
+            line_n, 'F', beta, f))
+        sys.stdout.write('{}::chr{}\t{:.4f}\n'.format(
+            line_n, 'Prec', pre))
+        sys.stdout.write('{}::chr{}\t{:.4f}\n'.format(
+            line_n, 'Rec', rec))
+
 
 def evaluate(hyp_lines, ref_lines, max_n,
              beta=1.0, ngram_weights=None,
              use_space=True, ref_separator='*#', compatible=False,
              print_missing=False, sentence_level=False, ngram_level=False):
-    hyp_per = [0. for _ in range(max_n)]
-    hyp_len = [0. for _ in range(max_n)]
-    ref_per = [0. for _ in range(max_n)]
-    ref_len = [0. for _ in range(max_n)]
     n_sentences = 0
     factor = beta ** 2
+    tot_stats = Stats(max_n)
 
     if ngram_weights is None:
         ngram_weights = [1/float(max_n) for _ in range(max_n)]
@@ -114,70 +198,28 @@ def evaluate(hyp_lines, ref_lines, max_n,
 
     # FIXME: safe zip
     for (hyp_line, ref_line) in zip(hyp_lines, ref_lines):
+        n_sentences += 1
         hyp_line = hyp_line.strip()
         ref_line = ref_line.strip()
-        n_sentences += 1
-        references = ref_line.split(ref_separator)
-        sent_pre = [0. for _ in range(max_n)]
-        sent_rec = [0. for _ in range(max_n)]
-        sent_f = [0. for _ in range(max_n)]
-        errors = errors_multiref(hyp_line, references,
-                                 max_n, use_space=use_space)
-        for (i, hyp_error, ref_error) in errors:
-            # in both cases .hyplen is correct
-            # hyplen is a misnomer: should be "length used for normalization"
-            hyp_per[i] += hyp_error.count
-            hyp_len[i] += hyp_error.hyplen
-            ref_per[i] += ref_error.count
-            ref_len[i] += ref_error.hyplen
-
-            if print_missing:
-                print_missing_ngrams(n_sentences, 'ref', i, ref_error,
-                                     compatible)
-                print_missing_ngrams(n_sentences, 'hyp', i, hyp_error,
-                                     compatible)
-
-            if sentence_level:
-                sent_pre[i] = 100 - hyp_error.precrec \
-                    if hyp_error.hyplen > 0 else 0
-                sent_rec[i] = 100 - ref_error.precrec \
-                    if ref_error.hyplen > 0 else 0
-                if sent_pre[i] != 0 or sent_rec[i] != 0:
-                    sent_f[i] = ((1 + factor) * sent_pre[i] * sent_rec[i]
-                                 / (factor * sent_pre[i] + sent_rec[i]))
-                else:
-                    sent_f[i] = 0
-                
-                if ngram_level:
-                    sys.stdout.write('{}::{}gram-{:6s}{:.4f}\n'.format(
-                        n_sentences, i + 1, 'F', sent_f[i]))
-                    sys.stdout.write('{}::{}gram-{:6s}{:.4f}\n'.format(
-                        n_sentences, i + 1, 'Prec', sent_pre[i]))
-                    sys.stdout.write('{}::{}gram-{:6s}{:.4f}\n'.format(
-                        n_sentences, i + 1, 'Rec', sent_rec[i]))
-
+        refs = ref_line.split(ref_separator)
+        sent_stats = evaluate_single(
+            hyp_line,
+            refs,
+            max_n,
+            factor,
+            use_space=use_space)
+        tot_stats += sent_stats
         if sentence_level:
-            sys.stdout.write('{}::chr{}-{}\t{:.4f}\n'.format(
-                n_sentences, 'F', beta,
-                sum(w * f for (w, f) in zip(ngram_weights, sent_f))))
-            sys.stdout.write('{}::chr{}\t{:.4f}\n'.format(
-                n_sentences, 'Prec', 
-                sum(w * p for (w, p) in zip(ngram_weights, sent_pre))))
-            sys.stdout.write('{}::chr{}\t{:.4f}\n'.format(
-                n_sentences, 'Rec',
-                sum(w * r for (w, r) in zip(ngram_weights, sent_rec))))
+            print_single(sent_stats,
+                         n_sentences,
+                         beta, factor,
+                         ngram_weights,
+                         print_missing=print_missing,
+                         sentence_level=sentence_level,
+                         ngram_level=ngram_level,
+                         compatible=compatible)
 
-    tot_pre = [100 * (1 - (hyp_per[i] / hyp_len[i]))
-               if hyp_len[i] > 0 else 0
-               for i in range(max_n)]
-    tot_rec = [100 * (1 - (ref_per[i] / ref_len[i]))
-               if ref_len[i] > 0 else 0
-               for i in range(max_n)]
-    divisors = [(factor * tot_pre[i] + tot_rec[i]) for i in range(max_n)]
-    tot_f = [(1 + factor) * tot_pre[i] * tot_rec[i] / divisors[i]
-             if divisors[i] > 0 else 0
-             for i in range(max_n)]
-
+    tot_pre, tot_rec, tot_f = tot_stats.ngram_prf(factor)
     if ngram_level:
         for i in range(max_n):
             sys.stdout.write('{}gram-{:6s}{:.4f}\n'.format(
