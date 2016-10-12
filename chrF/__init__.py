@@ -55,13 +55,13 @@ def errors_n(hypothesis, reference):
             errorcount += 1.
             missing.append(ngram)
 
-        if len(hypothesis) != 0:
-            precrec = 100. * errorcount / len(hypothesis)
+    if len(hypothesis) != 0:
+        precrec = 100. * errorcount / len(hypothesis)
+    else:
+        if len(reference) != 0:
+            precrec = 100
         else:
-            if len(reference) != 0:
-                precrec = 100
-            else:
-                precrec = 0.
+            precrec = 0.
 
     return Errors(errorcount, precrec, missing,
                   len(hypothesis), len(reference))
