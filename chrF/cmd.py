@@ -72,7 +72,7 @@ Simple usage example:
     add_arg('--reference-separator', dest='refsep',
             default='*#', metavar='SEP',
             help='Separator for multiple references '
-                 '(default "%(default)s)".')
+                 '(default "%(default)s").')
 
     add_arg = parser.add_argument_group(
         'output options').add_argument
