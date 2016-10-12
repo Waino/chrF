@@ -152,8 +152,9 @@ def evaluate_single(hypothesis, references, max_n, factor,
     return stats
 
 
-def print_single(stats, line_n, beta, factor, ngram_weights,
+def print_single(stats, line_n, beta, ngram_weights,
                  print_missing, sentence_level, ngram_level, compatible):
+    factor = beta ** 2
     if print_missing:
         for i in range(stats.max_n):
             print_missing_ngrams(line_n, 'ref', i, stats.ref_missing[i],
@@ -173,8 +174,7 @@ def print_single(stats, line_n, beta, factor, ngram_weights,
                 line_n, i + 1, 'Rec', recs[i]))
             
     if sentence_level:
-        pre, rec, f = apply_ngram_weights(
-            pres, recs, fs, ngram_weights)
+        pre, rec, f = apply_ngram_weights(pres, recs, fs, ngram_weights)
         sys.stdout.write('{}::chr{}-{}\t{:.4f}\n'.format(
             line_n, 'F', beta, f))
         sys.stdout.write('{}::chr{}\t{:.4f}\n'.format(
@@ -182,10 +182,31 @@ def print_single(stats, line_n, beta, factor, ngram_weights,
         sys.stdout.write('{}::chr{}\t{:.4f}\n'.format(
             line_n, 'Rec', rec))
 
+def print_summary(stats, beta, ngram_weights, ngram_level):
+    factor = beta ** 2
+    tot_pre, tot_rec, tot_f = stats.ngram_prf(factor)
+    if ngram_level:
+        for i in range(stats.max_n):
+            sys.stdout.write('{}gram-{:6s}{:.4f}\n'.format(
+                i + 1, 'F', tot_f[i]))
+            sys.stdout.write('{}gram-{:6s}{:.4f}\n'.format(
+                i + 1, 'Prec', tot_pre[i]))
+            sys.stdout.write('{}gram-{:6s}{:.4f}\n'.format(
+                i + 1, 'Rec', tot_rec[i]))
+
+    pre, rec, f = apply_ngram_weights(tot_pre, tot_rec, tot_f, ngram_weights)
+    sys.stdout.write('chr{}-{}\t{:.4f}\n'.format(
+        'F', beta, f))
+    sys.stdout.write('chr{}\t{:.4f}\n'.format(
+        'Prec', pre))
+    sys.stdout.write('chr{}\t{:.4f}\n'.format(
+        'Rec', rec))
+
 
 def evaluate(hyp_lines, ref_lines, max_n,
              beta=1.0, ngram_weights=None,
-             use_space=True, ref_separator='*#', compatible=False,
+             use_space=True, ref_separator='*#',
+             summary=True, compatible=False,
              print_missing=False, sentence_level=False, ngram_level=False):
     n_sentences = 0
     factor = beta ** 2
@@ -213,45 +234,30 @@ def evaluate(hyp_lines, ref_lines, max_n,
         if sentence_level:
             print_single(sent_stats,
                          n_sentences,
-                         beta, factor,
+                         beta,
                          ngram_weights,
                          print_missing=print_missing,
                          sentence_level=sentence_level,
                          ngram_level=ngram_level,
                          compatible=compatible)
 
-    tot_pre, tot_rec, tot_f = tot_stats.ngram_prf(factor)
-    if ngram_level:
-        for i in range(max_n):
-            sys.stdout.write('{}gram-{:6s}{:.4f}\n'.format(
-                i + 1, 'F', tot_f[i]))
-            sys.stdout.write('{}gram-{:6s}{:.4f}\n'.format(
-                i + 1, 'Prec', tot_pre[i]))
-            sys.stdout.write('{}gram-{:6s}{:.4f}\n'.format(
-                i + 1, 'Rec', tot_rec[i]))
-
-    sys.stdout.write('chr{}-{}\t{:.4f}\n'.format(
-        'F', beta,
-        sum(w * f for (w, f) in zip(ngram_weights, tot_f))))
-    sys.stdout.write('chr{}\t{:.4f}\n'.format(
-        'Prec', 
-        sum(w * p for (w, p) in zip(ngram_weights, tot_pre))))
-    sys.stdout.write('chr{}\t{:.4f}\n'.format(
-        'Rec',
-        sum(w * r for (w, r) in zip(ngram_weights, tot_rec))))
+    if summary:
+        print_summary(tot_stats, beta, ngram_weights, ngram_level)
+    return tot_stats
 
 
 if __name__ == '__main__':
     with open('direct.plain', 'r') as hyp_lines:
         with open('ref.plain', 'r') as ref_lines:
-            evaluate(hyp_lines,
-                     ref_lines,
-                     max_n=6,
-                     beta=2.0,
-                     ngram_weights=None,
-                     use_space=True,
-                     ref_separator='*#',
-                     compatible=True,
-                     print_missing=True,
-                     sentence_level=True,
-                     ngram_level=True)
+            stats = evaluate(
+                hyp_lines,
+                ref_lines,
+                max_n=6,
+                beta=2.0,
+                ngram_weights=None,
+                use_space=True,
+                ref_separator='*#',
+                compatible=True,
+                print_missing=True,
+                sentence_level=True,
+                ngram_level=True)
