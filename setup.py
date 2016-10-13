@@ -17,7 +17,7 @@ setup(name='chrF',
       author_email='stig-arne.gronroos@aalto.fi',
       #url='',
       description='chrF',
-      packages=['chrF', 'chrF.tests'],
+      packages=['chrF'], #, 'chrF.tests'],
       classifiers=[
           'Development Status :: 4 - Beta',
           'Intended Audience :: Science/Research',
