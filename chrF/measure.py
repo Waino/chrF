@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8
 """
 chrF - Reimplementation of the character-F evaluation measure for SMT
-Original by Maja Popovic
+Popovic, Maja. (2015). ChrF: character n-gram F-score
+for automatic MT evaluation. EMNLP 2015, 392.
+
+This implementation (c) Stig-Arne Grönroos 2016.
 """
 
 import collections
