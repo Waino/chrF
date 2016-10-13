@@ -28,6 +28,7 @@ setup(name='chrF',
       ],
       license="BSD",
       scripts=['scripts/chrF',
+               'scripts/chrF_sgm',
               ],
       #install_requires=requires,
       #extras_require={

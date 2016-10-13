@@ -201,12 +201,11 @@ def print_summary(stats, beta, ngram_weights,
 
 
 def evaluate(hyp_lines,
-             ref_lines,
+             ref_tuples,
              max_n,
              beta=1.0,
              ngram_weights=None,
              use_space=True,
-             ref_separator='*#',
              summary=True,
              hide_precrec=False,
              print_missing=False,
@@ -223,11 +222,8 @@ def evaluate(hyp_lines,
         tot = sum(ngram_weights)
         ngram_weights = [float(w) / tot for w in ngram_weights]
 
-    for (hyp_line, ref_line) in safe_zip(hyp_lines, ref_lines):
+    for (hyp_line, refs) in safe_zip(hyp_lines, ref_tuples):
         n_sentences += 1
-        hyp_line = hyp_line.strip()
-        ref_line = ref_line.strip()
-        refs = ref_line.split(ref_separator)
         sent_stats = evaluate_single(
             hyp_line,
             refs,

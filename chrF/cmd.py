@@ -101,6 +101,9 @@ def main(args):
 
     with open(args.hypothesis, 'r') as hyp_lines:
         with open(args.reference, 'r') as ref_lines:
+            hyp_lines = (line.strip() for line in hyp_lines)
+            ref_lines = (line.strip().split(args.refsep)
+                         for line in ref_lines)
             stats = evaluate(
                 hyp_lines,
                 ref_lines,
@@ -108,7 +111,6 @@ def main(args):
                 beta=args.beta,
                 ngram_weights=ngram_weights,
                 use_space=not args.ignore_space,
-                ref_separator=args.refsep,
                 hide_precrec=args.hide_precrec,
                 print_missing=args.missing,
                 sentence_level=args.sent_level,
