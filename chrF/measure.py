@@ -17,6 +17,17 @@ Errors = collections.namedtuple('Errors',
 
 #__all__ = []
 
+def chrf(hypothesis, references, beta=2.0, use_space=True):
+    """convenience function for the most common setting:
+    equally weighted n-grams up to length 6"""
+    factor = beta ** 2
+    max_n = 6
+    nw = [1/float(max_n) for _ in range(max_n)]
+    stats = evaluate_single(hypothesis, references, max_n, factor)
+    pres, recs, fs = stats.ngram_prf(factor)
+    _, _, score = apply_ngram_weights(pres, recs, fs, nw)
+    return score
+
 def ngrams(line, n):
     """Yields ngrams of length exactly n."""
     offsets = [line[i:] for i in range(n)]
@@ -134,8 +145,8 @@ def apply_ngram_weights(pres, recs, fs, ngram_weights):
     f   = sum(w * f for (w, f) in zip(ngram_weights, fs))
     return (pre, rec, f)
 
-def evaluate_single(hypothesis, references, max_n, factor,
-                    use_space=True, ref_separator='*#'):
+def evaluate_single(hypothesis, references, max_n, factor=None,
+                    use_space=True):
     stats = Stats(max_n)
     errors = errors_multiref(hypothesis, references,
                              max_n, use_space=use_space)
@@ -149,7 +160,6 @@ def evaluate_single(hypothesis, references, max_n, factor,
         stats.hyp_missing[i] = hyp_error.missing
         stats.ref_missing[i] = ref_error.missing
     return stats
-
 
 def print_single(stats, line_n, beta, ngram_weights,
                  print_missing, sentence_level, ngram_level, compatible):
